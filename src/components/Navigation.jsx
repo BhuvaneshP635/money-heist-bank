@@ -1,0 +1,4 @@
+import React from 'react';
+import { Landmark,LayoutDashboard,UserRound,HandCoins,ArrowLeftRight,ShieldCheck,LogOut } from 'lucide-react';
+const customer=[['dashboard','Dashboard',LayoutDashboard],['profile','My Profile',UserRound],['loans','Loans',HandCoins],['transfers','Transfers',ArrowLeftRight]];
+export default function Navigation({page,setPage,role,onLogout,bank}){const items=role==='admin'?[['admin','Admin Dashboard',ShieldCheck]]:customer;return <aside className="sidebar"><div className="brand"><span className="brand-icon"><Landmark/></span><span><strong>{bank.wordmark}</strong><small>BANKING PORTAL</small></span></div><nav>{items.map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>setPage(id)}><Icon size={18}/>{label}</button>)}</nav><button className="switch-link" onClick={onLogout}><LogOut size={17}/> Sign out</button></aside>}

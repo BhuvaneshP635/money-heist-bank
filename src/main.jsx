@@ -1,0 +1,10 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import '@fontsource-variable/inter';
+import App from './App';
+import bank from './bank-config';
+import './style.css';
+document.title = bank.name + ' | Account portal';
+const theme=createTheme({palette:{primary:{main:'#e50914'},background:{default:'#101014'}},shape:{borderRadius:10},typography:{fontFamily:'"Inter Variable", Inter, sans-serif'}});
+createRoot(document.getElementById('root')).render(<ThemeProvider theme={theme}><CssBaseline/><App/></ThemeProvider>);

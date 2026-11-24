@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active != false;
+    }
+
+    match /customers/{uid} {
+      allow create: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email is string
+        && request.resource.data.keys().hasOnly([
+          'uid', 'name', 'email', 'phone', 'dob', 'address', 'city', 'state',
+          'pinCode', 'createdAt', 'updatedAt', 'accountProvisioningStatus'
+        ]);
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'phone', 'address', 'city', 'state', 'pinCode', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /admins/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /loan_applications/{loanId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.amountMinor is int
+        && request.resource.data.amountMinor >= 100000
+        && request.resource.data.tenureMonths is int
+        && request.resource.data.tenureMonths >= 1
+        && request.resource.data.tenureMonths <= 360
+        && request.resource.data.annualRatePercent is number
+        && request.resource.data.annualRatePercent >= 0
+        && request.resource.data.annualRatePercent <= 60
+        && request.resource.data.purpose is string
+        && request.resource.data.purpose.size() > 0
+        && request.resource.data.loanType in ['PERSONAL', 'HOME', 'VEHICLE', 'EDUCATION', 'BUSINESS']
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'loanType', 'amountRupees', 'amountMinor', 'annualRatePercent',
+          'tenureMonths', 'purpose', 'status', 'createdAt'
+        ]);
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin()
+        && resource.data.status == 'PENDING'
+        && request.resource.data.status in ['PENDING_DISBURSEMENT', 'REJECTED']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt is string
+        && request.resource.data.reviewReason is string
+        && (request.resource.data.status != 'REJECTED' || request.resource.data.reviewReason.size() > 0)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'reviewReason', 'reviewedAt', 'reviewedBy'
+        ]);
+      allow delete: if false;
+    }
+
+    match /accounts/{accountId} {
+      // The existing Worker stores account ownership in customerUid (not uid).
+      allow read: if signedIn() && (resource.data.customerUid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    match /ledger_entries/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /audit_logs/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // All collections not explicitly granted above are private by default.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
