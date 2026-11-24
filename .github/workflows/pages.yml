@@ -1,3 +1,4 @@
+
 name: Deploy bank page
 
 on:
@@ -15,17 +16,25 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
+
       - uses: actions/configure-pages@v5
+
       - run: npm ci
-      - run: npm run build
+
+      - name: Build project
+        run: npm run build
         env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_X42_API_URL: ${{ vars.VITE_X42_API_URL }}
+
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
@@ -33,12 +42,15 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     permissions:
       pages: write
       id-token: write
+
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
       - uses: actions/deploy-pages@v4
         id: deploy
